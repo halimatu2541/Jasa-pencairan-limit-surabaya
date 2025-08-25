@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jasa Pencairan Limit Paylater</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Roboto', Arial, sans-serif; margin: 0; background: #f7f9fa; color: #222;}
+    header { background: #0062cc; color: #fff; padding: 24px 0; text-align: center;}
+    .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);}
+    h1 { margin: 0 0 16px;}
+    .info { font-size: 1.1em; margin-bottom: 24px;}
+    ul { margin-bottom: 24px;}
+    li { margin-bottom: 8px;}
+    form { margin-top: 24px;}
+    label { display: block; margin-bottom: 6px; font-weight: bold;}
+    input, textarea { width: 100%; padding: 8px; margin-bottom: 16px; border-radius: 4px; border: 1px solid #ccc;}
+    button { background: #0062cc; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-size: 1em; cursor: pointer;}
+    button:hover { background: #004fa3;}
+    .success { color: green; margin-bottom: 16px;}
+    .preview-img { max-width: 200px; margin-top: 8px; margin-bottom: 16px; display: block;}
+    .note-img { font-size: 0.95em; color: #555;}
+    .review-section { margin-top: 40px;}
+    .review-list { margin-bottom: 24px; }
+    .review-item { border-bottom: 1px solid #eee; padding: 12px 0;}
+    .review-name { font-weight: bold;}
+    .review-rating { color: orange; font-size: 1.2em;}
+    .review-comment { margin-top: 6px; }
+    .review-date { font-size: 0.92em; color: #888;}
+    .stars { display: inline-block; }
+    .star { cursor: pointer; font-size: 1.3em; color: #ccc;}
+    .star.selected { color: orange;}
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Jasa Pencairan Limit Paylater</h1>
+    <p>Solusi Aman & Cepat untuk Mencairkan Dana dari Limit Paylater Anda!</p>
+  </header>
+  <div class="container">
+    <div class="info">
+      <b>Butuh dana cepat dari limit Paylater Atau Kartu Kredit Anda?</b> Kami siap membantu mencairkan limit dari berbagai platform Paylater (Shopee, Akulaku, Kredivo, dan lainnya) secara aman, terpercaya, dan proses mudah.
+    </div>
+    <ul>
+      <li>Proses mudah & cepat </li>
+      <li>Langsung Cair </li>
+      <li>Privasi Anda terjamin</li>
+      <li>Berbagai platform Paylater</li>
+      <li>Biaya jasa terjangkau</li>
+      <li>Langsung transfer ke rekening Anda</li>
+    </ul>
+    <h3>Konsultasi & Order:</h3>
+    <form id="contactForm">
+      <div class="success" id="successMsg" style="display:none;"></div>
+      <label for="name">Nama Anda</label>
+      <input type="text" id="name" name="name" required>
+      <label for="paylater">Platform Paylater</label>
+      <input type="text" id="paylater" name="paylater" placeholder="Contoh: Shopee, Akulaku" required>
+      <label for="limit">Limit yang ingin dicairkan (Rp)</label>
+      <input type="number" id="limit" name="limit" required>
+      <label for="wa">Nomor WhatsApp</label>
+      <input type="text" id="wa" name="wa" required>
+      <label for="notes">Catatan (opsional)</label>
+      <textarea id="notes" name="notes" rows="3"></textarea>
+      <label for="gambar">Upload Screenshot Limit (opsional)</label>
+      <input type="file" id="gambar" name="gambar" accept="image/*">
+      <span class="note-img">*Gambar tidak dikirim otomatis ke WhatsApp, silakan upload untuk verifikasi dan kirim manual saat chat.</span>
+      <img id="previewImg" class="preview-img" style="display:none;">
+      <button type="submit">Kirim Permintaan</button>
+    </form>
+    <hr>
+    <p>Atau hubungi langsung via WhatsApp di <b>0898-7700-047</b> untuk info lebih lanjut!</p>
+
+    <!-- Review Section -->
+    <div class="review-section">
+      <h3>Ulasan Pelanggan</h3>
+      <div id="reviewList" class="review-list"></div>
+      <form id="reviewForm">
+        <label for="reviewName">Nama Anda</label>
+        <input type="text" id="reviewName" name="reviewName" required>
+        <label>Rating</label>
+        <span id="starRating" class="stars"></span>
+        <input type="hidden" id="reviewRating" name="reviewRating" required>
+        <label for="reviewComment">Komentar/Ulasan</label>
+        <textarea id="reviewComment" name="reviewComment" rows="3" required></textarea>
+        <button type="submit">Kirim Ulasan</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    // --- Firebase Configuration (ISI DENGAN PUNYA ANDA) ---
+    const firebaseConfig = {
+      apiKey: "ISI_API_KEY_ANDA",
+      authDomain: "ISI_AUTH_DOMAIN_ANDA",
+      databaseURL: "ISI_DATABASE_URL_ANDA",
+      projectId: "ISI_PROJECT_ID_ANDA",
+      storageBucket: "ISI_STORAGE_BUCKET_ANDA",
+      messagingSenderId: "ISI_MSG_SENDER_ID_ANDA",
+      appId: "ISI_APP_ID_ANDA"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Preview gambar saat dipilih
+    document.getElementById('gambar').addEventListener('change', function(e){
+      const file = e.target.files[0];
+      const preview = document.getElementById('previewImg');
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          preview.src = ev.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.src = '';
+        preview.style.display = 'none';
+      }
+    });
+
+    // Form submit WhatsApp
+    document.getElementById('contactForm').addEventListener('submit', function(e){
+      e.preventDefault();
+
+      // Ambil data dari form
+      var name = document.getElementById('name').value;
+      var paylater = document.getElementById('paylater').value;
+      var limit = document.getElementById('limit').value;
+      var wa = document.getElementById('wa').value;
+      var notes = document.getElementById('notes').value;
+      var gambar = document.getElementById('gambar').files[0];
+
+      // Buat pesan WhatsApp
+      var message = "Halo, saya ingin menggunakan jasa pencairan limit Paylater:\n" +
+        "Nama: " + name + "\n" +
+        "Platform Paylater: " + paylater + "\n" +
+        "Limit yang ingin dicairkan: Rp" + limit + "\n" +
+        "Nomor WhatsApp: " + wa + "\n" +
+        (notes ? ("Catatan: " + notes + "\n") : "") +
+        (gambar ? "[Screenshot limit sudah diupload di form. Akan saya kirim manual via chat WhatsApp]" : "");
+
+      var encodedMsg = encodeURIComponent(message);
+      var phone = "628987700047"; // gunakan 62 untuk Indonesia
+
+      // Redirect ke WhatsApp
+      window.location.href = "https://wa.me/" + phone + "?text=" + encodedMsg;
+    });
+
+    // --------- Review Feature (Firebase) ---------
+    // Render stars for rating
+    function renderStars(selected = 0) {
+      const starContainer = document.getElementById('starRating');
+      starContainer.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const span = document.createElement('span');
+        span.className = 'star' + (i <= selected ? ' selected' : '');
+        span.innerHTML = '&#9733;';
+        span.dataset.value = i;
+        span.onclick = function() {
+          document.getElementById('reviewRating').value = i;
+          renderStars(i);
+        };
+        starContainer.appendChild(span);
+      }
+    }
+    renderStars();
+
+    // Load & display reviews from Firebase
+    function loadReviews() {
+      const reviewList = document.getElementById('reviewList');
+      reviewList.innerHTML = '<p>Mengambil ulasan...</p>';
+      db.ref('reviews').orderByChild('date').on('value', function(snapshot){
+        reviewList.innerHTML = '';
+        const reviews = [];
+        snapshot.forEach(function(child){
+          reviews.push(child.val());
+        });
+        if (reviews.length === 0) {
+          reviewList.innerHTML = '<p>Belum ada ulasan, jadilah yang pertama!</p>';
+        } else {
+          reviews.reverse().forEach(function(r){
+            const item = document.createElement('div');
+            item.className = 'review-item';
+            item.innerHTML =
+              '<span class="review-name">'+r.name+'</span> ' +
+              '<span class="review-rating">'+('&#9733;'.repeat(r.rating))+'</span> ' +
+              '<span class="review-date">('+r.date+')</span>' +
+              '<div class="review-comment">'+r.comment+'</div>';
+            reviewList.appendChild(item);
+          });
+        }
+      });
+    }
+    loadReviews();
+
+    // Handle review submit - send to Firebase
+    document.getElementById('reviewForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name = document.getElementById('reviewName').value;
+      const rating = parseInt(document.getElementById('reviewRating').value);
+      const comment = document.getElementById('reviewComment').value;
+      if (!rating || rating < 1 || rating > 5) {
+        alert('Silakan pilih rating bintang!');
+        return;
+      }
+      const now = new Date();
+      const review = {
+        name: name,
+        rating: rating,
+        comment: comment,
+        date: now.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+      };
+      db.ref('reviews').push(review, function(error){
+        if (!error) {
+          renderStars();
+          document.getElementById('reviewForm').reset();
+          alert('Terima kasih atas ulasan Anda!');
+        } else {
+          alert('Gagal mengirim ulasan. Coba lagi.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
